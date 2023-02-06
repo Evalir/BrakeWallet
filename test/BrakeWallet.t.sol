@@ -5,6 +5,9 @@ import "forge-std/Test.sol";
 import "../src/BrakeWallet.sol";
 
 contract BrakeWalletTest is Test {
+    event Deposit(address indexed from, uint256 amount);
+    event Withdrawal(address indexed from, uint256 amount);
+
     BrakeWallet public wallet;
 
     function setUp() public {
@@ -14,6 +17,8 @@ contract BrakeWalletTest is Test {
     function testDeposit() public {
         vm.deal(msg.sender, 1 ether);
 
+        vm.expectEmit(true, false, false, false);
+        emit Deposit(address(this), 1 ether);
         wallet.deposit{value: 1 ether}();
 
         assert(address(wallet).balance == 1 ether);
@@ -28,6 +33,8 @@ contract BrakeWalletTest is Test {
         assert(wallet.balanceOf(address(this)) == 2 ether);
         assert(address(wallet).balance == 2 ether);
 
+        vm.expectEmit(true, false, false, true);
+        emit Withdrawal(address(this), 1 ether);
         wallet.withdraw(1 ether);
         // Test that the wallet is rate limited correctly
         vm.expectRevert();
@@ -39,6 +46,27 @@ contract BrakeWalletTest is Test {
 
         assert(address(wallet).balance == 0);
         assert(wallet.balanceOf(address(this)) == 0);
+    }
+
+    function testWithdrawRateLimit(uint96 amount) public {
+        wallet.deposit{value: address(this).balance}();
+
+        vm.assume(amount > 1 ether);
+
+        vm.expectRevert();
+        wallet.withdraw(amount);
+    }
+
+    function testWithdrawSuccessful(uint96 amount) public {
+        vm.assume(amount < 1 ether);
+
+        vm.expectEmit(true, false, false, true);
+        emit Deposit(address(this), address(this).balance);
+        wallet.deposit{value: address(this).balance}();
+
+        vm.expectEmit(true, false, false, true);
+        emit Withdrawal(address(this), amount);
+        wallet.withdraw(amount);
     }
 
     receive() external payable {}
