@@ -8,7 +8,7 @@ contract BrakeWalletTest is Test {
     BrakeWallet public wallet;
 
     function setUp() public {
-        wallet = new BrakeWallet(1 ether);
+        wallet = new BrakeWallet(1 ether, 1 hours);
     }
 
     function testDeposit() public {
@@ -21,12 +21,19 @@ contract BrakeWalletTest is Test {
     }
 
     function testWithdraw() public {
-        vm.deal(msg.sender, 1 ether);
+        vm.deal(msg.sender, 2 ether);
 
-        wallet.deposit{value: 1 ether}();
+        wallet.deposit{value: 2 ether}();
 
-        assert(wallet.balanceOf(address(this)) == 1 ether);
-        assert(address(wallet).balance == 1 ether);
+        assert(wallet.balanceOf(address(this)) == 2 ether);
+        assert(address(wallet).balance == 2 ether);
+
+        wallet.withdraw(1 ether);
+        // Test that the wallet is rate limited correctly
+        vm.expectRevert();
+        wallet.withdraw(1 ether);
+        // Warp an hour, to get over the period
+        vm.warp(block.timestamp + 1 hours);
 
         wallet.withdraw(1 ether);
 
