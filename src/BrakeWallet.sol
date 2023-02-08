@@ -8,8 +8,8 @@ contract BrakeWallet {
     mapping(address => uint256) balances;
     // updated lazily
     mapping(address => uint256) withdrawalForPeriod;
-    uint256 public withdrawalLimit;
-    uint256 periodDuration;
+    uint256 immutable withdrawalLimit;
+    uint256 immutable periodDuration;
     uint256 periodEnd;
 
     constructor(uint256 _withdrawalLimit, uint256 _periodDuration) {
@@ -25,12 +25,12 @@ contract BrakeWallet {
         }
     }
 
-    function deposit() public payable {
+    function deposit() external payable {
         balances[msg.sender] += msg.value;
         emit Deposit(msg.sender, msg.value);
     }
 
-    function withdraw(uint256 amount) public {
+    function withdraw(uint256 amount) external {
         updatePeriod(msg.sender);
 
         uint256 balance = balances[msg.sender];
@@ -42,12 +42,11 @@ contract BrakeWallet {
         withdrawalForPeriod[msg.sender] += amount;
         balances[msg.sender] -= amount;
 
-        payable(msg.sender).transfer(amount);
-
         emit Withdrawal(msg.sender, amount);
+        payable(msg.sender).transfer(amount);
     }
 
-    function balanceOf(address from) public view returns (uint256) {
+    function balanceOf(address from) external view returns (uint256) {
         return balances[from];
     }
 }
